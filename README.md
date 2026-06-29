@@ -23,12 +23,13 @@ Implemented:
 - Lightweight Agent Runtime with Provider interface, structured output validation, Tool Registry, Candidate creation, Candidate validation, ToolCall recording, RAG retrieval, and trace recording.
 - Backend API endpoints for trips, preferences, candidates, versions, and agent runs.
 - SQLAlchemy repositories for Trip, TripCandidate, TripVersion, and current itinerary projection.
+- Configurable repository backend through `REPOSITORY_BACKEND`; `sqlalchemy` enables per-request SQLAlchemy repositories for the Trip/Candidate API path.
 - Transaction-wrapped Candidate publish path with rollback coverage when a late write fails.
 - Frontend pages for trip list, trip creation, trip detail, preferences, candidate review, version history, and agent run details.
 
 Not yet implemented:
 
-- FastAPI dependency wiring that replaces the default in-memory repositories with per-request SQLAlchemy repositories.
+- SQLAlchemy repositories for Preference, AgentRun, ToolCall, RAG, and AgentTrace.
 - Real JWT login endpoint and password hashing flow wired to persistent users.
 - Real provider integrations for maps, weather, transfer time, opening hours, and model calls.
 - Real embedding generation and vector similarity search.
@@ -49,6 +50,7 @@ Dependency management conventions:
 
 - Backend runtime dependencies live in `backend/requirements.txt`.
 - Backend local/test dependencies live in `backend/requirements-dev.txt`.
+- `REPOSITORY_BACKEND=memory` keeps the demo in-memory path; `REPOSITORY_BACKEND=sqlalchemy` uses SQLAlchemy repositories for the Trip/Candidate API path.
 - The Python interpreter version is pinned by `.python-version`.
 - The frontend dependency lock is `frontend/package-lock.json`; use `npm ci` in CI once the lockfile is committed.
 - Generated folders such as `.venv/`, `node_modules/`, `dist/`, and TypeScript build info stay untracked.

@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://waypilot:waypilot@localhost:5432/waypilot"
+    repository_backend: str = "memory"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret_key: str = "change-me"
     openai_compatible_base_url: str = ""
@@ -13,4 +14,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

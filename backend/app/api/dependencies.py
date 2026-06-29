@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from ..core.config import settings
+from ..db.session import get_db_session
 from ..domain.conflicts import DeterministicConflictDetector
 from ..repositories.memory import (
     InMemoryAgentRunRepository,
@@ -7,6 +12,11 @@ from ..repositories.memory import (
     InMemoryToolCallRepository,
     InMemoryTripCandidateRepository,
     InMemoryTripRepository,
+)
+from ..repositories.sqlalchemy import (
+    SQLAlchemyTransactionManager,
+    SQLAlchemyTripCandidateRepository,
+    SQLAlchemyTripRepository,
 )
 from ..services.trip_candidates import TripCandidateService
 from ..services.trips import PreferenceService, TripService
@@ -30,7 +40,16 @@ def get_current_user_id() -> str:
     return "demo-user"
 
 
-def get_trip_service() -> TripService:
+def get_repository_backend() -> str:
+    return settings.repository_backend
+
+
+def get_trip_service(
+    db_session: Session = Depends(get_db_session),
+    repository_backend: str = Depends(get_repository_backend),
+) -> TripService:
+    if repository_backend == "sqlalchemy":
+        return TripService(trip_repository=SQLAlchemyTripRepository(db_session))
     return trip_service
 
 
@@ -38,7 +57,17 @@ def get_preference_service() -> PreferenceService:
     return preference_service
 
 
-def get_trip_candidate_service() -> TripCandidateService:
+def get_trip_candidate_service(
+    db_session: Session = Depends(get_db_session),
+    repository_backend: str = Depends(get_repository_backend),
+) -> TripCandidateService:
+    if repository_backend == "sqlalchemy":
+        return TripCandidateService(
+            trip_repository=SQLAlchemyTripRepository(db_session),
+            candidate_repository=SQLAlchemyTripCandidateRepository(db_session),
+            conflict_detector=DeterministicConflictDetector(),
+            transaction_manager=SQLAlchemyTransactionManager(db_session),
+        )
     return trip_candidate_service
 
 
