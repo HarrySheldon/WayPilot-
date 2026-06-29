@@ -10,7 +10,7 @@ Project documents:
 
 ## Current Development Status
 
-The project has an MVP vertical slice for all planned phases using in-memory repositories plus SQLAlchemy/Alembic persistence scaffolding.
+The project has an MVP vertical slice for all planned phases using in-memory repositories, plus a SQLAlchemy-backed repository vertical slice for the Trip/Candidate publish path.
 
 Implemented:
 
@@ -22,15 +22,17 @@ Implemented:
 - Deterministic conflict detector for time overlap, transfer, opening status, budget, weather, pace, required places, and avoidances.
 - Lightweight Agent Runtime with Provider interface, structured output validation, Tool Registry, Candidate creation, Candidate validation, ToolCall recording, RAG retrieval, and trace recording.
 - Backend API endpoints for trips, preferences, candidates, versions, and agent runs.
+- SQLAlchemy repositories for Trip, TripCandidate, TripVersion, and current itinerary projection.
+- Transaction-wrapped Candidate publish path with rollback coverage when a late write fails.
 - Frontend pages for trip list, trip creation, trip detail, preferences, candidate review, version history, and agent run details.
 
 Not yet implemented:
 
-- SQLAlchemy repository implementations replacing the in-memory repositories.
+- FastAPI dependency wiring that replaces the default in-memory repositories with per-request SQLAlchemy repositories.
 - Real JWT login endpoint and password hashing flow wired to persistent users.
 - Real provider integrations for maps, weather, transfer time, opening hours, and model calls.
 - Real embedding generation and vector similarity search.
-- Installed dependency verification, FastAPI runtime test, Alembic migration execution, Vite build, and browser QA.
+- Live PostgreSQL `alembic upgrade head` execution and browser QA.
 
 ## Local Verification
 

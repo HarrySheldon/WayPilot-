@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
 from typing import Callable, Protocol
 from uuid import uuid4
@@ -30,6 +31,11 @@ class ConflictDetector(Protocol):
         ...
 
 
+class TransactionManager(Protocol):
+    def begin(self) -> AbstractContextManager[None]:
+        ...
+
+
 @dataclass(frozen=True)
 class TripCandidateCreateInput:
     source_type: str
@@ -48,12 +54,14 @@ class TripCandidateService:
         candidate_repository: InMemoryTripCandidateRepository,
         conflict_detector: ConflictDetector,
         id_generator: Callable[[], str] | None = None,
+        transaction_manager: TransactionManager | None = None,
     ) -> None:
         self._trip_repository = trip_repository
         self._candidate_repository = candidate_repository
         self._conflict_detector = conflict_detector
         self._id_generator = id_generator or (lambda: str(uuid4()))
         self._publisher = TripCandidatePublisher()
+        self._transaction_manager = transaction_manager
 
     def create_candidate(self, *, user_id: str, trip_id: str, data: TripCandidateCreateInput) -> TripCandidate:
         trip = self._get_trip_for_user(user_id=user_id, trip_id=trip_id)
@@ -81,6 +89,9 @@ class TripCandidateService:
     def validate_candidate(self, *, user_id: str, candidate_id: str) -> TripCandidate:
         candidate = self._get_candidate_for_user(user_id=user_id, candidate_id=candidate_id)
         trip = self._get_trip_for_user(user_id=user_id, trip_id=candidate.trip_id)
+        return self._validate_candidate_against_trip(candidate=candidate, trip=trip)
+
+    def _validate_candidate_against_trip(self, *, candidate: TripCandidate, trip: Trip) -> TripCandidate:
         conflicts = self._conflict_detector.detect(
             itinerary_snapshot=candidate.itinerary_snapshot,
             budget_snapshot=candidate.budget_snapshot,
@@ -100,17 +111,19 @@ class TripCandidateService:
         ignored_warning_conflict_ids: set[str] | None = None,
         publish_note: str | None = None,
     ) -> TripVersion:
-        candidate = self.validate_candidate(user_id=user_id, candidate_id=candidate_id)
-        trip = self._get_trip_for_user(user_id=user_id, trip_id=candidate.trip_id)
-        version = self._publisher.publish(
-            trip=trip,
-            candidate=candidate,
-            ignored_warning_conflict_ids=ignored_warning_conflict_ids,
-            publish_note=publish_note,
-        )
-        self._trip_repository.save(trip)
-        self._candidate_repository.save(candidate)
-        return version
+        with self._begin_transaction():
+            candidate = self._get_candidate_for_user(user_id=user_id, candidate_id=candidate_id)
+            trip = self._get_trip_for_user(user_id=user_id, trip_id=candidate.trip_id, lock=True)
+            candidate = self._validate_candidate_against_trip(candidate=candidate, trip=trip)
+            version = self._publisher.publish(
+                trip=trip,
+                candidate=candidate,
+                ignored_warning_conflict_ids=ignored_warning_conflict_ids,
+                publish_note=publish_note,
+            )
+            self._trip_repository.save(trip)
+            self._candidate_repository.save(candidate)
+            return version
 
     def discard_candidate(self, *, user_id: str, candidate_id: str) -> TripCandidate:
         candidate = self._get_candidate_for_user(user_id=user_id, candidate_id=candidate_id)
@@ -128,31 +141,32 @@ class TripCandidateService:
         return next(version for version in trip.versions if version.id == version_id)
 
     def rollback_version(self, *, user_id: str, version_id: str, publish_note: str | None = None) -> TripVersion:
-        trip = self._trip_repository.find_by_version_id(version_id)
-        if trip is None or trip.user_id != user_id:
-            raise TripVersionNotFoundError(f"version not found: {version_id}")
-        source_version = next(version for version in trip.versions if version.id == version_id)
-        next_version_no = len(trip.versions) + 1
-        rollback_version = TripVersion(
-            id=f"{trip.id}-v{next_version_no}",
-            trip_id=trip.id,
-            version_no=next_version_no,
-            source_candidate_id=f"rollback:{source_version.id}",
-            source_type="rollback",
-            rolled_back_from_version_id=source_version.id,
-            itinerary_snapshot=deepcopy(source_version.itinerary_snapshot),
-            budget_snapshot=deepcopy(source_version.budget_snapshot),
-            preference_snapshot=deepcopy(source_version.preference_snapshot),
-            conflict_snapshot=list(source_version.conflict_snapshot),
-            ignored_warning_conflict_ids=list(source_version.ignored_warning_conflict_ids),
-            publish_note=publish_note,
-        )
-        trip.versions.append(rollback_version)
-        trip.days = self._publisher.build_projection(rollback_version.itinerary_snapshot)
-        trip.active_version_id = rollback_version.id
-        trip.status = "active"
-        self._trip_repository.save(trip)
-        return rollback_version
+        with self._begin_transaction():
+            trip = self._trip_repository.find_by_version_id(version_id)
+            if trip is None or trip.user_id != user_id:
+                raise TripVersionNotFoundError(f"version not found: {version_id}")
+            source_version = next(version for version in trip.versions if version.id == version_id)
+            next_version_no = len(trip.versions) + 1
+            rollback_version = TripVersion(
+                id=f"{trip.id}-v{next_version_no}",
+                trip_id=trip.id,
+                version_no=next_version_no,
+                source_candidate_id=f"rollback:{source_version.id}",
+                source_type="rollback",
+                rolled_back_from_version_id=source_version.id,
+                itinerary_snapshot=deepcopy(source_version.itinerary_snapshot),
+                budget_snapshot=deepcopy(source_version.budget_snapshot),
+                preference_snapshot=deepcopy(source_version.preference_snapshot),
+                conflict_snapshot=list(source_version.conflict_snapshot),
+                ignored_warning_conflict_ids=list(source_version.ignored_warning_conflict_ids),
+                publish_note=publish_note,
+            )
+            trip.versions.append(rollback_version)
+            trip.days = self._publisher.build_projection(rollback_version.itinerary_snapshot)
+            trip.active_version_id = rollback_version.id
+            trip.status = "active"
+            self._trip_repository.save(trip)
+            return rollback_version
 
     def _get_candidate_for_user(self, *, user_id: str, candidate_id: str) -> TripCandidate:
         candidate = self._candidate_repository.get(candidate_id)
@@ -164,11 +178,19 @@ class TripCandidateService:
             raise CandidateNotFoundError(f"candidate not found: {candidate_id}") from exc
         return candidate
 
-    def _get_trip_for_user(self, *, user_id: str, trip_id: str) -> Trip:
-        trip = self._trip_repository.get(trip_id)
+    def _get_trip_for_user(self, *, user_id: str, trip_id: str, lock: bool = False) -> Trip:
+        if lock and hasattr(self._trip_repository, "get_for_update"):
+            trip = self._trip_repository.get_for_update(trip_id)
+        else:
+            trip = self._trip_repository.get(trip_id)
         if trip is None or trip.user_id != user_id:
             raise TripNotFoundError(f"trip not found: {trip_id}")
         return trip
+
+    def _begin_transaction(self) -> AbstractContextManager[None]:
+        if self._transaction_manager is None:
+            return nullcontext()
+        return self._transaction_manager.begin()
 
 
 def _summarize_conflicts(conflicts: list[Conflict]) -> dict[str, int]:
