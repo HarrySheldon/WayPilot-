@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 from ..domain.agents import ToolCall
-from ..repositories.memory import InMemoryToolCallRepository
 from ..services.trip_candidates import TripCandidateCreateInput, TripCandidateService
 
 
@@ -19,12 +18,23 @@ class ToolContext:
     agent_run_id: str
 
 
+class ToolCallRepository(Protocol):
+    def next_id(self, agent_run_id: str) -> str:
+        ...
+
+    def save(self, call: ToolCall) -> ToolCall:
+        ...
+
+    def list_by_run(self, agent_run_id: str) -> list[ToolCall]:
+        ...
+
+
 class ToolRegistry:
     def __init__(
         self,
         *,
         candidate_service: TripCandidateService,
-        tool_call_repository: InMemoryToolCallRepository,
+        tool_call_repository: ToolCallRepository,
     ) -> None:
         self._candidate_service = candidate_service
         self._tool_call_repository = tool_call_repository

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Protocol
 
 from ..domain.agents import AgentRun, AgentRunStatus, UnifiedMessage
-from ..repositories.memory import InMemoryAgentRunRepository
 from .structured_output import StructuredOutputValidationError, StructuredOutputValidator
 from .tools import ToolContext, ToolExecutionError, ToolRegistry
 from .trace import TraceRecorder
@@ -19,11 +18,16 @@ class RagRetriever(Protocol):
         ...
 
 
+class AgentRunRepository(Protocol):
+    def save(self, run: AgentRun) -> AgentRun:
+        ...
+
+
 class AgentRuntime:
     def __init__(
         self,
         *,
-        agent_run_repository: InMemoryAgentRunRepository,
+        agent_run_repository: AgentRunRepository,
         provider: ProviderAdapter,
         rag_retriever: RagRetriever,
         tool_registry: ToolRegistry,

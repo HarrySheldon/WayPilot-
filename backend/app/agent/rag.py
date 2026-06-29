@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from ..domain.rag import RagHit
-from ..repositories.memory import InMemoryRagRepository
+from typing import Protocol
+
+from ..domain.rag import RagChunk, RagDocument, RagHit
+
+
+class RagRepository(Protocol):
+    def list_chunks(self) -> list[RagChunk]:
+        ...
+
+    def get_document(self, document_id: str) -> RagDocument | None:
+        ...
 
 
 class ControlledKnowledgeRetriever:
-    def __init__(self, *, repository: InMemoryRagRepository) -> None:
+    def __init__(self, *, repository: RagRepository) -> None:
         self._repository = repository
 
     def retrieve(self, *, user_id: str, query: str, city: str | None = None, limit: int = 5) -> list[RagHit]:

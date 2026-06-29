@@ -1,16 +1,27 @@
 from __future__ import annotations
 
+from typing import Protocol
+
 from ..domain.agents import AgentRun, AgentTrace
 from ..domain.rag import RagHit
-from ..repositories.memory import InMemoryAgentTraceRepository, InMemoryToolCallRepository
+
+
+class AgentTraceRepository(Protocol):
+    def save(self, trace: AgentTrace) -> AgentTrace:
+        ...
+
+
+class ToolCallReader(Protocol):
+    def list_by_run(self, agent_run_id: str) -> list:
+        ...
 
 
 class TraceRecorder:
     def __init__(
         self,
         *,
-        trace_repository: InMemoryAgentTraceRepository,
-        tool_call_repository: InMemoryToolCallRepository,
+        trace_repository: AgentTraceRepository,
+        tool_call_repository: ToolCallReader,
     ) -> None:
         self._trace_repository = trace_repository
         self._tool_call_repository = tool_call_repository
