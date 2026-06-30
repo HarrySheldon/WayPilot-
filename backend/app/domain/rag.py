@@ -23,6 +23,7 @@ class RagChunk:
     document_id: str
     chunk_index: int
     content: str
+    embedding: list[float] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

@@ -404,20 +404,51 @@ class SQLAlchemyRagRepository:
         orm.document_id = chunk.document_id
         orm.chunk_index = chunk.chunk_index
         orm.content = chunk.content
-        orm.embedding = _zero_embedding()
+        orm.embedding = list(chunk.embedding) if chunk.embedding else _zero_embedding()
         orm.metadata_json = _copy_dict(chunk.metadata)
         self._session.flush()
         return chunk
 
+    def find_document_by_source(
+        self,
+        *,
+        owner_user_id: str | None,
+        source_type: str,
+        source_id: str | None,
+    ) -> RagDocument | None:
+        query = select(RagDocumentORM).where(RagDocumentORM.source_type == source_type)
+        if owner_user_id is None:
+            query = query.where(RagDocumentORM.owner_user_id.is_(None))
+        else:
+            query = query.where(RagDocumentORM.owner_user_id == owner_user_id)
+        if source_id is None:
+            query = query.where(RagDocumentORM.source_id.is_(None))
+        else:
+            query = query.where(RagDocumentORM.source_id == source_id)
+        orm = self._session.scalars(query).one_or_none()
+        return _rag_document_to_domain(orm) if orm is not None else None
+
     def get_document(self, document_id: str) -> RagDocument | None:
         orm = self._session.get(RagDocumentORM, document_id)
         return _rag_document_to_domain(orm) if orm is not None else None
+
+    def list_chunks_by_document(self, document_id: str) -> list[RagChunk]:
+        rows = self._session.scalars(
+            select(RagChunkORM)
+            .where(RagChunkORM.document_id == document_id)
+            .order_by(RagChunkORM.chunk_index, RagChunkORM.id)
+        ).all()
+        return [_rag_chunk_to_domain(row) for row in rows]
 
     def list_chunks(self) -> list[RagChunk]:
         rows = self._session.scalars(
             select(RagChunkORM).order_by(RagChunkORM.document_id, RagChunkORM.chunk_index, RagChunkORM.id)
         ).all()
         return [_rag_chunk_to_domain(row) for row in rows]
+
+    def delete_chunks_by_document(self, document_id: str) -> None:
+        self._session.execute(delete(RagChunkORM).where(RagChunkORM.document_id == document_id))
+        self._session.flush()
 
 
 class SQLAlchemyAgentTraceRepository:
@@ -548,6 +579,7 @@ def _rag_chunk_to_domain(orm: RagChunkORM) -> RagChunk:
         document_id=orm.document_id,
         chunk_index=orm.chunk_index,
         content=orm.content,
+        embedding=_embedding_to_list(orm.embedding),
         metadata=_copy_dict(orm.metadata_json),
     )
 
@@ -591,6 +623,12 @@ def _copy_dict(value: dict[str, Any] | None) -> dict[str, Any]:
 
 def _zero_embedding() -> list[float]:
     return [0.0] * 1536
+
+
+def _embedding_to_list(value) -> list[float]:
+    if value is None:
+        return []
+    return [float(item) for item in value]
 
 
 def _agent_event_sort_key(event: AgentRunEventORM) -> tuple[str, int, str]:

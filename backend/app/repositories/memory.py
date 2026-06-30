@@ -114,11 +114,39 @@ class InMemoryRagRepository:
         self._chunks[chunk.id] = chunk
         return chunk
 
+    def find_document_by_source(
+        self,
+        *,
+        owner_user_id: str | None,
+        source_type: str,
+        source_id: str | None,
+    ) -> RagDocument | None:
+        return next(
+            (
+                document
+                for document in self._documents.values()
+                if document.owner_user_id == owner_user_id
+                and document.source_type == source_type
+                and document.source_id == source_id
+            ),
+            None,
+        )
+
     def get_document(self, document_id: str) -> RagDocument | None:
         return self._documents.get(document_id)
 
+    def list_chunks_by_document(self, document_id: str) -> list[RagChunk]:
+        return sorted(
+            [chunk for chunk in self._chunks.values() if chunk.document_id == document_id],
+            key=lambda chunk: (chunk.chunk_index, chunk.id),
+        )
+
     def list_chunks(self) -> list[RagChunk]:
         return list(self._chunks.values())
+
+    def delete_chunks_by_document(self, document_id: str) -> None:
+        for chunk_id in [chunk.id for chunk in self._chunks.values() if chunk.document_id == document_id]:
+            del self._chunks[chunk_id]
 
 
 class InMemoryAgentTraceRepository:

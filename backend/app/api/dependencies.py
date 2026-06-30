@@ -32,6 +32,8 @@ from ..repositories.sqlalchemy import (
     SQLAlchemyTripRepository,
 )
 from ..repositories.users import SQLAlchemyUserRepository
+from ..rag.embeddings import DeterministicEmbeddingProvider
+from ..rag.vector_retriever import VectorRagRetriever
 from ..services.agent_runs import AgentRunService, build_agent_executor
 from ..services.auth import AuthService
 from ..services.trip_candidates import TripCandidateService
@@ -191,6 +193,17 @@ def get_agent_provider():
     return SeedItineraryProvider()
 
 
+def get_embedding_provider():
+    return DeterministicEmbeddingProvider()
+
+
+def get_rag_retriever(
+    rag_repo=Depends(get_rag_repository),
+    embedding_provider=Depends(get_embedding_provider),
+):
+    return VectorRagRetriever(repository=rag_repo, embedding_provider=embedding_provider)
+
+
 def get_agent_executor(
     candidate_service: TripCandidateService = Depends(get_trip_candidate_service),
     run_repo=Depends(get_agent_run_repository),
@@ -198,6 +211,7 @@ def get_agent_executor(
     rag_repo=Depends(get_rag_repository),
     trace_repo=Depends(get_agent_trace_repository),
     provider=Depends(get_agent_provider),
+    rag_retriever=Depends(get_rag_retriever),
 ):
     return build_agent_executor(
         agent_run_repository=run_repo,
@@ -206,6 +220,7 @@ def get_agent_executor(
         rag_repository=rag_repo,
         trace_repository=trace_repo,
         provider=provider,
+        rag_retriever=rag_retriever,
     )
 
 

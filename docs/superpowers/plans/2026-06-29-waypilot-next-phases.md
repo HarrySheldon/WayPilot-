@@ -577,7 +577,7 @@ archive task keeps AgentRun/ToolCall/Trace but may prune verbose events
 - Modify: `backend/app/repositories/sqlalchemy.py`
 - Test: `backend/tests/rag/test_rag_ingest.py`
 
-- [ ] **Step 1: Add failing tests**
+- [x] **Step 1: Add failing tests**
 
 Required behavior:
 
@@ -588,7 +588,7 @@ re-ingesting same source updates existing document/chunks
 private user document stores owner_user_id
 ```
 
-- [ ] **Step 2: Implement deterministic fake embedding for tests**
+- [x] **Step 2: Implement deterministic fake embedding for tests**
 
 Test embedding adapter:
 
@@ -608,7 +608,7 @@ No live embedding API required in MVP.
 - Modify: `backend/app/api/dependencies.py`
 - Test: `backend/tests/rag/test_vector_retriever.py`
 
-- [ ] **Step 1: Add user isolation tests**
+- [x] **Step 1: Add user isolation tests**
 
 Required behavior:
 

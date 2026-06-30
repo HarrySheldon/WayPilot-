@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Callable, Protocol
 from uuid import uuid4
 
-from ..agent.rag import ControlledKnowledgeRetriever
 from ..agent.runtime import AgentRuntime
 from ..agent.seed_provider import SeedItineraryProvider
 from ..agent.structured_output import StructuredOutputValidator
 from ..agent.tools import ToolRegistry
 from ..agent.trace import TraceRecorder
 from ..domain.agents import AgentRun, AgentRunStatus
+from ..rag.embeddings import DeterministicEmbeddingProvider
+from ..rag.vector_retriever import VectorRagRetriever
 from ..services.trips import TripService
 from .trip_candidates import TripCandidateService
 
@@ -56,6 +57,11 @@ class AgentTraceRepository(Protocol):
 
 class AgentProvider(Protocol):
     def generate_itinerary(self, *, messages: list, rag_hits: list) -> dict:
+        ...
+
+
+class RagRetriever(Protocol):
+    def retrieve(self, *, user_id: str, query: str, city: str | None = None, limit: int = 5) -> list:
         ...
 
 
@@ -144,14 +150,19 @@ def build_agent_executor(
     rag_repository: RagRepository,
     trace_repository: AgentTraceRepository,
     provider: AgentProvider | None = None,
+    rag_retriever: RagRetriever | None = None,
 ) -> AgentExecutor:
     selected_provider = provider or SeedItineraryProvider()
+    selected_retriever = rag_retriever or VectorRagRetriever(
+        repository=rag_repository,
+        embedding_provider=DeterministicEmbeddingProvider(),
+    )
 
     def execute(run: AgentRun) -> AgentRun:
         runtime = AgentRuntime(
             agent_run_repository=agent_run_repository,
             provider=selected_provider,
-            rag_retriever=ControlledKnowledgeRetriever(repository=rag_repository),
+            rag_retriever=selected_retriever,
             tool_registry=ToolRegistry(
                 candidate_service=candidate_service,
                 tool_call_repository=tool_call_repository,
