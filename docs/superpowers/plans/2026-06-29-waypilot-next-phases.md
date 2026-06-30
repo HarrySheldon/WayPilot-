@@ -315,7 +315,7 @@ all tests pass
 - Create: `backend/app/schemas/providers.py`
 - Test: `backend/tests/providers/test_seed_providers.py`
 
-- [ ] **Step 1: Write failing tests for provider contracts**
+- [x] **Step 1: Write failing tests for provider contracts**
 
 Required contracts:
 
@@ -345,7 +345,7 @@ Expected:
 ImportError for missing providers module
 ```
 
-- [ ] **Step 2: Implement deterministic seed providers**
+- [x] **Step 2: Implement deterministic seed providers**
 
 Seed providers must return stable IDs:
 
@@ -365,7 +365,7 @@ Weather and transfer results must be deterministic so conflict tests are stable.
 - Modify: `backend/app/core/config.py`
 - Test: `backend/tests/providers/test_provider_cache.py`
 
-- [ ] **Step 1: Add tests for cache key semantics**
+- [x] **Step 1: Add tests for cache key semantics**
 
 Required behavior:
 
@@ -376,7 +376,7 @@ cache stores internal DTO dict, not raw third-party response
 Redis outage -> provider still works without failing the business request
 ```
 
-- [ ] **Step 2: Implement cache wrapper**
+- [x] **Step 2: Implement cache wrapper**
 
 Use a boundary like:
 
@@ -395,7 +395,7 @@ Do not let Redis become the source of truth.
 - Modify: `backend/app/api/dependencies.py`
 - Test: `backend/tests/agent/test_tool_registry_providers.py`
 
-- [ ] **Step 1: Add failing tests for new tools**
+- [x] **Step 1: Add failing tests for new tools**
 
 Required tools:
 
@@ -418,7 +418,7 @@ Provider tools return structured DTOs.
 Unknown tool fails with ToolExecutionError.
 ```
 
-- [ ] **Step 2: Implement tools through service/provider boundaries**
+- [x] **Step 2: Implement tools through service/provider boundaries**
 
 Do not let tools import SQLAlchemy models or repositories directly.
 
