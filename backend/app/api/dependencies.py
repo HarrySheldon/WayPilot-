@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from ..core.config import settings
+from ..core.security import InvalidTokenError, PasswordHasher, TokenService
 from ..db.session import get_db_session
 from ..domain.conflicts import DeterministicConflictDetector
+from ..domain.users import User
 from ..repositories.memory import (
     InMemoryAgentRunRepository,
     InMemoryAgentTraceRepository,
@@ -14,6 +17,7 @@ from ..repositories.memory import (
     InMemoryToolCallRepository,
     InMemoryTripCandidateRepository,
     InMemoryTripRepository,
+    InMemoryUserRepository,
 )
 from ..repositories.sqlalchemy import (
     SQLAlchemyAgentRunRepository,
@@ -25,9 +29,14 @@ from ..repositories.sqlalchemy import (
     SQLAlchemyTripCandidateRepository,
     SQLAlchemyTripRepository,
 )
+from ..repositories.users import SQLAlchemyUserRepository
+from ..services.auth import AuthService
 from ..services.trip_candidates import TripCandidateService
 from ..services.trips import PreferenceService, TripService
 
+bearer_scheme = HTTPBearer(auto_error=False)
+
+user_repository = InMemoryUserRepository()
 trip_repository = InMemoryTripRepository()
 preference_repository = InMemoryPreferenceRepository()
 candidate_repository = InMemoryTripCandidateRepository()
@@ -45,12 +54,59 @@ trip_candidate_service = TripCandidateService(
 )
 
 
-def get_current_user_id() -> str:
-    return "demo-user"
-
-
 def get_repository_backend() -> str:
     return settings.repository_backend
+
+
+def get_token_service() -> TokenService:
+    return TokenService(secret_key=settings.jwt_secret_key)
+
+
+def get_password_hasher() -> PasswordHasher:
+    return PasswordHasher()
+
+
+def get_user_repository(
+    db_session: Session = Depends(get_db_session),
+    repository_backend: str = Depends(get_repository_backend),
+):
+    if repository_backend == "sqlalchemy":
+        return SQLAlchemyUserRepository(db_session)
+    return user_repository
+
+
+def get_auth_service(
+    user_repo=Depends(get_user_repository),
+    password_hasher: PasswordHasher = Depends(get_password_hasher),
+    token_service: TokenService = Depends(get_token_service),
+) -> AuthService:
+    return AuthService(
+        user_repository=user_repo,
+        password_hasher=password_hasher,
+        token_service=token_service,
+    )
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token_service: TokenService = Depends(get_token_service),
+    user_repo=Depends(get_user_repository),
+) -> User:
+    if credentials is None:
+        raise _unauthorized()
+    try:
+        payload = token_service.verify_access_token(credentials.credentials)
+    except InvalidTokenError as exc:
+        raise _unauthorized() from exc
+
+    user = user_repo.get(payload.subject)
+    if user is None:
+        raise _unauthorized()
+    return user
+
+
+def get_current_user_id(current_user: User = Depends(get_current_user)) -> str:
+    return current_user.id
 
 
 def get_trip_service(
@@ -119,3 +175,11 @@ def get_agent_trace_repository(
     if repository_backend == "sqlalchemy":
         return SQLAlchemyAgentTraceRepository(db_session)
     return agent_trace_repository
+
+
+def _unauthorized() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

@@ -8,6 +8,11 @@ import hmac
 import json
 from typing import Any, Callable
 
+from passlib.context import CryptContext
+
+
+_password_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
 
 class InvalidTokenError(ValueError):
     pass
@@ -21,6 +26,18 @@ class ExpiredTokenError(InvalidTokenError):
 class TokenPayload:
     subject: str
     issuer: str
+
+
+class PasswordHasher:
+    def hash(self, password: str) -> str:
+        if not password:
+            raise ValueError("password is required")
+        return _password_context.hash(password)
+
+    def verify(self, password: str, password_hash: str) -> bool:
+        if not password or not password_hash:
+            return False
+        return _password_context.verify(password, password_hash)
 
 
 class TokenService:

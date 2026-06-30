@@ -3,6 +3,22 @@ from __future__ import annotations
 from ..domain.agents import AgentRun, AgentTrace, ToolCall
 from ..domain.rag import RagChunk, RagDocument
 from ..domain.trips import Trip, TripCandidate, UserPreference
+from ..domain.users import User
+
+
+class InMemoryUserRepository:
+    def __init__(self) -> None:
+        self._users: dict[str, User] = {}
+
+    def save(self, user: User) -> User:
+        self._users[user.id] = user
+        return user
+
+    def get(self, user_id: str) -> User | None:
+        return self._users.get(user_id)
+
+    def get_by_email(self, email: str) -> User | None:
+        return next((user for user in self._users.values() if user.email == email), None)
 
 
 class InMemoryTripRepository:

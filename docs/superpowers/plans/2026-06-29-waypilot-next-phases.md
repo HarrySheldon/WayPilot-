@@ -139,7 +139,7 @@ frontend/src/pages/VersionsPage.tsx
 - Test: `backend/tests/services/test_auth_service.py`
 - Test: `backend/tests/repositories/test_user_repository.py`
 
-- [ ] **Step 1: Add failing auth service tests**
+- [x] **Step 1: Add failing auth service tests**
 
 Write tests for:
 
@@ -166,7 +166,7 @@ Expected:
 ImportError or AttributeError for missing AuthService/UserRepository/PasswordHasher
 ```
 
-- [ ] **Step 2: Add password hashing implementation**
+- [x] **Step 2: Add password hashing implementation**
 
 Preferred dependency:
 
@@ -184,7 +184,7 @@ class PasswordHasher:
     def verify(self, password: str, password_hash: str) -> bool: ...
 ```
 
-- [ ] **Step 3: Add SQLAlchemy user repository**
+- [x] **Step 3: Add SQLAlchemy user repository**
 
 Repository methods:
 
@@ -197,7 +197,7 @@ class SQLAlchemyUserRepository:
 
 Keep repository data-access only. Duplicate email handling can surface an integrity error, but user-friendly conflict semantics belong in `AuthService`.
 
-- [ ] **Step 4: Run auth repository/service tests**
+- [x] **Step 4: Run auth repository/service tests**
 
 Run:
 
@@ -223,7 +223,7 @@ all tests pass
 - Test: `backend/tests/api/test_auth_api.py`
 - Test: `backend/tests/api/test_user_isolation.py`
 
-- [ ] **Step 1: Add failing API tests**
+- [x] **Step 1: Add failing API tests**
 
 Required API behavior:
 
@@ -246,7 +246,7 @@ Expected:
 404 for missing endpoints or 200 where 401 is expected because demo-user is still hard-coded
 ```
 
-- [ ] **Step 2: Implement Bearer auth dependency**
+- [x] **Step 2: Implement Bearer auth dependency**
 
 Replace:
 
@@ -268,7 +268,7 @@ def get_current_user_id(
 
 Map invalid or expired token to `401`.
 
-- [ ] **Step 3: Add demo seed script**
+- [x] **Step 3: Add demo seed script**
 
 Create:
 
@@ -283,7 +283,7 @@ Create demo@example.com / password123 only if it does not already exist.
 Use AuthService so the password is hashed exactly like production login.
 ```
 
-- [ ] **Step 4: Run full backend tests**
+- [x] **Step 4: Run full backend tests**
 
 Run:
 
