@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     openai_compatible_base_url: str = ""
     openai_compatible_api_key: str = ""
     openai_compatible_model: str = ""
+    openai_compatible_timeout_seconds: float = 30
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

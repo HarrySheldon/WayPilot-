@@ -438,7 +438,7 @@ Do not let tools import SQLAlchemy models or repositories directly.
 - Modify: `backend/app/core/config.py`
 - Test: `backend/tests/agent/test_provider_adapter.py`
 
-- [ ] **Step 1: Add adapter tests**
+- [x] **Step 1: Add adapter tests**
 
 Test with a fake HTTP transport, not a live model:
 
@@ -450,7 +450,7 @@ plain JSON response -> parsed dict
 HTTP/model error -> ProviderError
 ```
 
-- [ ] **Step 2: Implement adapter behind a Protocol**
+- [x] **Step 2: Implement adapter behind a Protocol**
 
 Config fields:
 
@@ -471,7 +471,7 @@ Default runtime should still use fake/seed provider in tests unless model config
 - Modify: `backend/app/agent/runtime.py`
 - Test: `backend/tests/agent/test_agent_error_recovery.py`
 
-- [ ] **Step 1: Add tests for failure policy**
+- [x] **Step 1: Add tests for failure policy**
 
 Required behavior:
 
@@ -482,7 +482,7 @@ tool error -> AgentRun.failed and ToolCall.error persisted
 business validation blocking conflicts -> AgentRun.completed and Candidate.status=blocked
 ```
 
-- [ ] **Step 2: Implement bounded retries**
+- [x] **Step 2: Implement bounded retries**
 
 No unbounded loops. Runtime config should include:
 
