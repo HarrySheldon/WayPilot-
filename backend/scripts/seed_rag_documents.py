@@ -2,10 +2,16 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from backend.app.db.session import SessionLocal
-from backend.app.rag.embeddings import DeterministicEmbeddingProvider
-from backend.app.rag.ingest import RagIngestor
-from backend.app.repositories.sqlalchemy import SQLAlchemyRagRepository
+try:
+    from backend.app.db.session import SessionLocal
+    from backend.app.rag.embeddings import DeterministicEmbeddingProvider
+    from backend.app.rag.ingest import RagIngestor
+    from backend.app.repositories.sqlalchemy import SQLAlchemyRagRepository
+except ModuleNotFoundError:
+    from app.db.session import SessionLocal
+    from app.rag.embeddings import DeterministicEmbeddingProvider
+    from app.rag.ingest import RagIngestor
+    from app.repositories.sqlalchemy import SQLAlchemyRagRepository
 
 
 SEED_DOCUMENTS = [

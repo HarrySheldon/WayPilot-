@@ -720,7 +720,7 @@ old version rows remain visible
 - Create: `backend/app/core/logging.py`
 - Test: `backend/tests/api/test_error_responses.py`
 
-- [ ] **Step 1: Add error response tests**
+- [x] **Step 1: Add error response tests**
 
 Required response shape:
 
@@ -748,6 +748,9 @@ Do not leak stack traces or provider API keys.
 
 - [ ] **Step 1: Make Compose run full stack**
 
+  Compose config, backend Dockerfile, and frontend Dockerfile are updated and `docker compose config` passes.
+  Full `docker compose up --build` runtime smoke remains pending to avoid long-running image build/start during this pass.
+
 Required commands:
 
 ```powershell
@@ -770,7 +773,7 @@ http://localhost:5173
 - Modify: `plan.md`
 - Modify: `agent.md`
 
-- [ ] **Step 1: Add CI workflow**
+- [x] **Step 1: Add CI workflow**
 
 Required jobs:
 
@@ -779,7 +782,7 @@ backend tests on Python 3.12
 frontend typecheck/build on Node LTS
 ```
 
-- [ ] **Step 2: Refresh docs**
+- [x] **Step 2: Refresh docs**
 
 Update docs to reflect:
 

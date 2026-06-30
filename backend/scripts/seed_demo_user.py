@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import PasswordHasher, TokenService
-from backend.app.db.session import SessionLocal
-from backend.app.domain.users import User
-from backend.app.repositories.users import SQLAlchemyUserRepository
-from backend.app.services.auth import AuthService, RegisterUserInput
-from backend.app.core.config import settings
+try:
+    from backend.app.core.config import settings
+    from backend.app.core.security import PasswordHasher, TokenService
+    from backend.app.db.session import SessionLocal
+    from backend.app.domain.users import User
+    from backend.app.repositories.users import SQLAlchemyUserRepository
+    from backend.app.services.auth import AuthService, RegisterUserInput
+except ModuleNotFoundError:
+    from app.core.config import settings
+    from app.core.security import PasswordHasher, TokenService
+    from app.db.session import SessionLocal
+    from app.domain.users import User
+    from app.repositories.users import SQLAlchemyUserRepository
+    from app.services.auth import AuthService, RegisterUserInput
 
 
 def seed_demo_user(
