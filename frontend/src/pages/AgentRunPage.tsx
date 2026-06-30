@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { Card, Descriptions, Empty, Space, Table, Tag, Timeline, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { getAgentRun, listAgentRunToolCalls } from '../api/client'
-import type { ToolCall } from '../api/types'
+import type { AgentRun, ToolCall } from '../api/types'
+import { shouldPollAgentRun } from './agentRunRules'
 
 const toolColumns: TableColumnsType<ToolCall> = [
   { title: 'Tool', dataIndex: 'tool_name' },
@@ -17,6 +18,7 @@ export function AgentRunPage() {
     queryKey: ['agent-run', runId],
     queryFn: () => getAgentRun(runId!),
     enabled: Boolean(runId),
+    refetchInterval: (query) => (shouldPollAgentRun((query.state.data as AgentRun | undefined)?.status) ? 2000 : false),
   })
   const toolCallsQuery = useQuery({
     queryKey: ['agent-run-tool-calls', runId],
@@ -44,7 +46,9 @@ export function AgentRunPage() {
           <Descriptions.Item label="Trip">
             <Link to={`/trips/${run.trip_id}`}>{run.trip_id}</Link>
           </Descriptions.Item>
-          <Descriptions.Item label="Candidate">{run.candidate_id ?? 'None'}</Descriptions.Item>
+          <Descriptions.Item label="Candidate">
+            {run.candidate_id ? <Link to={`/trips/${run.trip_id}/candidates/${run.candidate_id}`}>{run.candidate_id}</Link> : 'None'}
+          </Descriptions.Item>
           <Descriptions.Item label="Error">{run.error_message ?? 'None'}</Descriptions.Item>
           <Descriptions.Item label="Request">{run.user_message}</Descriptions.Item>
         </Descriptions>

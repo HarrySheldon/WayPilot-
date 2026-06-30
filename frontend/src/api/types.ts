@@ -8,6 +8,22 @@ export interface TripPreference {
   natural_language_note: string
 }
 
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface AuthToken {
+  access_token: string
+  token_type: 'bearer' | string
+}
+
+export interface CurrentUser {
+  id: string
+  email: string
+  display_name: string | null
+}
+
 export interface Trip {
   id: string
   user_id: string
@@ -100,6 +116,10 @@ export interface AgentRun {
   candidate_id: string | null
   error_message: string | null
   events: AgentRunEvent[]
+}
+
+export interface AgentRunAccepted {
+  agent_run_id: string
 }
 
 export interface ToolCall {

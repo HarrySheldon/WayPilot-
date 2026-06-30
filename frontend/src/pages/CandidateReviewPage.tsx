@@ -1,29 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button, Card, Empty, Space, Table, Tag, Typography } from 'antd'
-import type { TableColumnsType } from 'antd'
+import { Button, Card, Checkbox, Empty, Space, Tag, Typography } from 'antd'
 import {
   discardTripCandidate,
   getTripCandidate,
   publishTripCandidate,
   validateTripCandidate,
 } from '../api/client'
-import type { Conflict } from '../api/types'
-
-const conflictColumns: TableColumnsType<Conflict> = [
-  {
-    title: 'Severity',
-    dataIndex: 'severity',
-    render: (severity) => <Tag color={severity === 'blocking' ? 'red' : severity === 'warning' ? 'orange' : 'blue'}>{severity}</Tag>,
-  },
-  { title: 'Type', dataIndex: 'conflict_type' },
-  { title: 'Message', dataIndex: 'message' },
-]
+import { ConflictList } from '../components/ConflictList'
+import { canPublishCandidate } from './candidateReviewRules'
 
 export function CandidateReviewPage() {
   const { candidateId, tripId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [confirmedWarningIds, setConfirmedWarningIds] = useState<Set<string>>(new Set())
   const candidateQuery = useQuery({
     queryKey: ['trip-candidate', candidateId],
     queryFn: () => getTripCandidate(candidateId!),
@@ -37,10 +29,7 @@ export function CandidateReviewPage() {
   })
   const publishMutation = useMutation({
     mutationFn: () => {
-      const warningIds = candidateQuery.data?.conflicts
-        .filter((conflict) => conflict.severity === 'warning')
-        .map((conflict) => conflict.id)
-      return publishTripCandidate(candidateId!, warningIds ?? [])
+      return publishTripCandidate(candidateId!, Array.from(confirmedWarningIds))
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['trip', tripId] })
@@ -59,7 +48,12 @@ export function CandidateReviewPage() {
   }
 
   const candidate = candidateQuery.data
-  const hasBlocking = candidate.conflicts.some((conflict) => conflict.severity === 'blocking')
+  const warningConflicts = candidate.conflicts.filter((conflict) => conflict.severity === 'warning')
+  const canPublish = canPublishCandidate(candidate, confirmedWarningIds)
+  const warningOptions = warningConflicts.map((conflict) => ({
+    label: conflict.message,
+    value: conflict.id,
+  }))
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -79,7 +73,7 @@ export function CandidateReviewPage() {
           </Button>
           <Button
             type="primary"
-            disabled={hasBlocking || candidate.status === 'published'}
+            disabled={!canPublish}
             onClick={() => publishMutation.mutate()}
             loading={publishMutation.isPending}
           >
@@ -88,13 +82,16 @@ export function CandidateReviewPage() {
         </Space>
       </Space>
       <Card title="Conflicts">
-        <Table<Conflict>
-          rowKey="id"
-          columns={conflictColumns}
-          dataSource={candidate.conflicts}
-          pagination={false}
-          locale={{ emptyText: 'No conflicts detected.' }}
-        />
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <ConflictList conflicts={candidate.conflicts} />
+          {warningOptions.length ? (
+            <Checkbox.Group
+              options={warningOptions}
+              value={Array.from(confirmedWarningIds)}
+              onChange={(values) => setConfirmedWarningIds(new Set(values.map(String)))}
+            />
+          ) : null}
+        </Space>
       </Card>
       <Card title="Itinerary snapshot">
         <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(candidate.itinerary_snapshot, null, 2)}</pre>

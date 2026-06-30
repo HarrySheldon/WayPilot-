@@ -1,6 +1,10 @@
 import type {
   AgentRun,
+  AgentRunAccepted,
   AgentRunEvent,
+  AuthToken,
+  CurrentUser,
+  LoginRequest,
   ToolCall,
   Trip,
   TripCandidate,
@@ -8,23 +12,51 @@ import type {
   TripVersion,
   UserPreference,
 } from './types'
+import { clearSession, getAccessToken, notifyUnauthorized } from '../auth/session'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = buildHeaders(init?.headers)
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
     ...init,
+    headers: {
+      ...headers,
+    },
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearSession()
+      notifyUnauthorized()
+    }
     throw new Error(`Request failed: ${response.status}`)
   }
 
   return response.json() as Promise<T>
+}
+
+function buildHeaders(headers?: HeadersInit): Record<string, string> {
+  const merged: Record<string, string> = { 'Content-Type': 'application/json' }
+  new Headers(headers).forEach((value, key) => {
+    merged[key] = value
+  })
+  const token = getAccessToken()
+  if (token) {
+    merged.Authorization = `Bearer ${token}`
+  }
+  return merged
+}
+
+export function login(data: LoginRequest): Promise<AuthToken> {
+  return request<AuthToken>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function getCurrentUser(): Promise<CurrentUser> {
+  return request<CurrentUser>('/users/me')
 }
 
 export function listTrips(): Promise<Trip[]> {
@@ -82,6 +114,20 @@ export function rollbackTripVersion(versionId: string): Promise<TripVersion> {
 
 export function getAgentRun(runId: string): Promise<AgentRun> {
   return request<AgentRun>(`/agent-runs/${runId}`)
+}
+
+export function generateTripWithAgent(tripId: string, message: string): Promise<AgentRunAccepted> {
+  return request<AgentRunAccepted>(`/trips/${tripId}/generate`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
+}
+
+export function adjustTripWithAgent(tripId: string, message: string): Promise<AgentRunAccepted> {
+  return request<AgentRunAccepted>(`/trips/${tripId}/adjust`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
 }
 
 export function listAgentRunEvents(runId: string): Promise<AgentRunEvent[]> {

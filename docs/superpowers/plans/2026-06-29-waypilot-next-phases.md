@@ -638,7 +638,7 @@ RagHit includes document_id, chunk_id, source_type, title, city, score, snippet
 - Modify: `frontend/src/api/client.ts`
 - Modify: `frontend/src/App.tsx`
 
-- [ ] **Step 1: Add API client tests**
+- [x] **Step 1: Add API client tests**
 
 Required behavior:
 
@@ -648,7 +648,7 @@ API client attaches Authorization Bearer token when present
 Vite dev proxy forwards /api to http://localhost:8000
 ```
 
-- [ ] **Step 2: Implement login and protected routes**
+- [x] **Step 2: Implement login and protected routes**
 
 Do not store refresh tokens because refresh tokens are not part of MVP. Store access token in a small session module and keep the blast radius explicit.
 
@@ -665,6 +665,9 @@ Do not store refresh tokens because refresh tokens are not part of MVP. Store ac
 
 - [ ] **Step 1: Add UI tests for the review loop**
 
+  Partial automated coverage added for AgentRun polling rules and warning-confirmation publish rules.
+  Browser-level review-loop tests remain pending because the current frontend test stack has no DOM testing driver.
+
 Required browser flow:
 
 ```text
@@ -675,7 +678,7 @@ Blocking conflicts disable publish
 Publish returns version and updates trip detail
 ```
 
-- [ ] **Step 2: Implement with TanStack Query**
+- [x] **Step 2: Implement with TanStack Query**
 
 Use server state for AgentRun/Candidate/Version. Use local React state only for UI choices such as warning conflict confirmations.
 
@@ -687,6 +690,9 @@ Use server state for AgentRun/Candidate/Version. Use local React state only for 
 - Modify: `frontend/src/pages/VersionsPage.tsx`
 
 - [ ] **Step 1: Add version UI tests**
+
+  Partial automated coverage added for descending version sort rules.
+  Browser-level rollback confirmation tests remain pending because the current frontend test stack has no DOM testing driver.
 
 Required behavior:
 

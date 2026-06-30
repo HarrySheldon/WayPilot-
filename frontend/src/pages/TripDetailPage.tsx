@@ -24,6 +24,9 @@ export function TripDetailPage() {
           {trip.title}
         </Typography.Title>
         <Tag>{trip.status}</Tag>
+        <Link to={`/trips/${trip.id}/agent`}>
+          <Button type="primary">Agent</Button>
+        </Link>
         <Link to={`/trips/${trip.id}/versions`}>
           <Button>Versions</Button>
         </Link>
