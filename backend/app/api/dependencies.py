@@ -4,6 +4,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from ..agent.provider_openai_compatible import OpenAICompatibleProviderAdapter
+from ..agent.seed_provider import SeedItineraryProvider
 from ..core.config import settings
 from ..core.security import InvalidTokenError, PasswordHasher, TokenService
 from ..db.session import get_db_session
@@ -30,6 +32,7 @@ from ..repositories.sqlalchemy import (
     SQLAlchemyTripRepository,
 )
 from ..repositories.users import SQLAlchemyUserRepository
+from ..services.agent_runs import AgentRunService, build_agent_executor
 from ..services.auth import AuthService
 from ..services.trip_candidates import TripCandidateService
 from ..services.trips import PreferenceService, TripService
@@ -175,6 +178,56 @@ def get_agent_trace_repository(
     if repository_backend == "sqlalchemy":
         return SQLAlchemyAgentTraceRepository(db_session)
     return agent_trace_repository
+
+
+def get_agent_provider():
+    if settings.openai_compatible_base_url and settings.openai_compatible_model:
+        return OpenAICompatibleProviderAdapter(
+            base_url=settings.openai_compatible_base_url,
+            api_key=settings.openai_compatible_api_key,
+            model=settings.openai_compatible_model,
+            timeout_seconds=settings.openai_compatible_timeout_seconds,
+        )
+    return SeedItineraryProvider()
+
+
+def get_agent_executor(
+    candidate_service: TripCandidateService = Depends(get_trip_candidate_service),
+    run_repo=Depends(get_agent_run_repository),
+    tool_call_repo=Depends(get_tool_call_repository),
+    rag_repo=Depends(get_rag_repository),
+    trace_repo=Depends(get_agent_trace_repository),
+    provider=Depends(get_agent_provider),
+):
+    return build_agent_executor(
+        agent_run_repository=run_repo,
+        candidate_service=candidate_service,
+        tool_call_repository=tool_call_repo,
+        rag_repository=rag_repo,
+        trace_repository=trace_repo,
+        provider=provider,
+    )
+
+
+def get_agent_run_service(
+    trip_service: TripService = Depends(get_trip_service),
+    run_repo=Depends(get_agent_run_repository),
+    agent_executor=Depends(get_agent_executor),
+) -> AgentRunService:
+    return AgentRunService(
+        trip_service=trip_service,
+        agent_run_repository=run_repo,
+        agent_executor=agent_executor,
+    )
+
+
+def get_agent_run_dispatcher():
+    from ..worker.tasks import run_agent_task
+
+    def dispatch(agent_run_id: str) -> None:
+        run_agent_task.apply_async((agent_run_id,))
+
+    return dispatch
 
 
 def _unauthorized() -> HTTPException:

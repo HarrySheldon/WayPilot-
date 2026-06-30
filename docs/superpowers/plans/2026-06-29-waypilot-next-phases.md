@@ -509,7 +509,7 @@ max_tool_attempts = 2
 - Test: `backend/tests/services/test_agent_run_service.py`
 - Test: `backend/tests/api/test_agent_generate_api.py`
 
-- [ ] **Step 1: Add failing tests for async handoff**
+- [x] **Step 1: Add failing tests for async handoff**
 
 Required API:
 
@@ -528,7 +528,7 @@ Agent task creates TripCandidate only
 Agent task never publishes
 ```
 
-- [ ] **Step 2: Implement service and task**
+- [x] **Step 2: Implement service and task**
 
 Task signature:
 
@@ -549,7 +549,7 @@ For tests, call the service method directly or run Celery eagerly through config
 - Modify: `backend/app/worker/tasks.py`
 - Test: `backend/tests/api/test_agent_run_lifecycle.py`
 
-- [ ] **Step 1: Add lifecycle tests**
+- [x] **Step 1: Add lifecycle tests**
 
 Required behavior:
 

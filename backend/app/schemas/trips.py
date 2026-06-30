@@ -31,6 +31,14 @@ class TripCreateRequest(BaseModel):
     natural_language_note: str = ""
 
 
+class AgentRunRequest(BaseModel):
+    message: str = Field(min_length=1)
+
+
+class AgentRunAcceptedResponse(BaseModel):
+    agent_run_id: str
+
+
 class TripResponse(BaseModel):
     id: str
     user_id: str

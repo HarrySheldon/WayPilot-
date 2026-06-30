@@ -21,6 +21,9 @@ class RagRetriever(Protocol):
 
 
 class AgentRunRepository(Protocol):
+    def get(self, run_id: str) -> AgentRun | None:
+        ...
+
     def save(self, run: AgentRun) -> AgentRun:
         ...
 
@@ -48,7 +51,10 @@ class AgentRuntime:
         self._error_recovery_policy = error_recovery_policy or ErrorRecoveryPolicy()
 
     def generate_trip_candidate(self, *, user_id: str, trip_id: str, user_message: str) -> AgentRun:
-        run = AgentRun(id=self._id_generator(), user_id=user_id, trip_id=trip_id, user_message=user_message)
+        run_id = self._id_generator()
+        run = self._agent_run_repository.get(run_id)
+        if run is None:
+            run = AgentRun(id=run_id, user_id=user_id, trip_id=trip_id, user_message=user_message)
         run.status = AgentRunStatus.RUNNING
         run.add_event("intent_extracted", "User request captured", payload={"message": user_message})
         self._agent_run_repository.save(run)
